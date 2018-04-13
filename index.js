@@ -23,6 +23,12 @@ Refs.prototype.batch = function (docs, cb) {
       value: JSON.stringify(doc.refs)
     })
   })
+  var remove = {}
+  docs.forEach(function (doc) {
+    ;(doc.links || []).forEach(function (link) {
+      remove[link] = true
+    })
+  })
   var refs = {}
   var pending = 1
   Object.keys(refSet).forEach(function (ref) {
@@ -31,26 +37,7 @@ Refs.prototype.batch = function (docs, cb) {
       refs[ref] = {}
       if (value) {
         JSON.parse(value).forEach(function (id) {
-          refs[ref][id] = true
-        })
-      }
-      if (--pending === 0) fromRefs()
-    })
-  })
-  var linkIds = {}, links = {}
-  docs.forEach(function (doc) {
-    ;(doc.links || []).forEach(function (link) {
-      linkIds[link] = true
-    })
-  })
-  var rmRefs = {}
-  Object.keys(linkIds).forEach(function (link) {
-    pending++
-    self._db.get(ORIGIN + link, function (err, value) {
-      if (value) {
-        JSON.parse(value).forEach(function (ref) {
-          if (!rmRefs[ref]) rmRefs[ref] = []
-          rmRefs[ref].push(link)
+          if (!remove[id]) refs[ref][id] = true
         })
       }
       if (--pending === 0) fromRefs()
@@ -59,21 +46,14 @@ Refs.prototype.batch = function (docs, cb) {
   if (--pending === 0) fromRefs()
 
   function fromRefs () {
-    Object.keys(rmRefs).forEach(function (ref) {
-      if (refs[ref]) {
-        rmRefs[ref].forEach(function (id) {
-          delete refs[ref][id]
-        })
-      } else { // need to load these other docs to remove refs
-        console.log('TODO',ref,rmRefs[ref])
-      }
-    })
     finish()
   }
   function finish () {
     docs.forEach(function (doc) {
       ;(doc.refs || []).forEach(function (ref) {
-        refs[ref][doc.id] = true
+        if (!remove[doc.id]) {
+          refs[ref][doc.id] = true
+        }
       })
     })
     Object.keys(refs).forEach(function (ref) {
