@@ -104,3 +104,63 @@ test('unordered multi-insert single target batch with link', function (t) {
     })
   }
 })
+
+test('ordered batch multi-target with links', function (t) {
+  t.plan(9)
+  var br = umbr(memdb())
+  var rows = [
+    { id: 'a', refs: [] },
+    { id: 'b', refs: [] },
+    { id: 'c', refs: ['a'] },
+    { id: 'd', refs: ['b'] },
+    { id: 'e', refs: ['a'], links: ['d'] }
+  ]
+  ;(function next (n) {
+    if (n === rows.length) return check()
+    br.batch([rows[n]], function (err) {
+      t.error(err)
+      next(n+1)
+    })
+  })(0)
+
+  function check () {
+    br.get('a', function (err, ids) {
+      t.error(err)
+      t.deepEqual(ids.sort(), ['c','e'])
+    })
+    br.get('b', function (err, ids) {
+      t.error(err)
+      t.deepEqual(ids.sort(), [])
+    })
+  }
+})
+
+test('ordered multi-insert multi-target with links', function (t) {
+  t.plan(9)
+  var br = umbr(memdb())
+  var rows = [
+    { id: 'a', refs: [] },
+    { id: 'b', refs: [] },
+    { id: 'c', refs: ['a'] },
+    { id: 'd', refs: ['b'] },
+    { id: 'e', refs: ['a'], links: ['d'] }
+  ]
+  ;(function next (n) {
+    if (n === rows.length) return check()
+    br.batch([rows[n]], function (err) {
+      t.error(err)
+      next(n+1)
+    })
+  })(0)
+
+  function check () {
+    br.get('a', function (err, ids) {
+      t.error(err)
+      t.deepEqual(ids.sort(), ['c','e'])
+    })
+    br.get('b', function (err, ids) {
+      t.error(err)
+      t.deepEqual(ids.sort(), [])
+    })
+  }
+})

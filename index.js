@@ -40,7 +40,7 @@ Refs.prototype.batch = function (docs, cb) {
     pending++
     self._db.get(LINK + doc.id, function (err, value) {
       if (value !== undefined) remove[doc.id] = true
-      if (--pending === 0) fromRefs()
+      if (--pending === 0) scanRemovals()
     })
   })
   Object.keys(refSet).forEach(function (ref) {
@@ -52,14 +52,50 @@ Refs.prototype.batch = function (docs, cb) {
           if (!remove[id]) refs[ref][id] = true
         })
       }
-      if (--pending === 0) fromRefs()
+      if (--pending === 0) scanRemovals()
     })
   })
-  if (--pending === 0) fromRefs()
+  if (--pending === 0) scanRemovals()
 
-  function fromRefs () {
-    finish()
+  function scanRemovals () {
+    // queue extra references to load
+    var pending = 1
+    var loadRef = {}
+    Object.keys(remove).forEach(function (key) {
+      pending++
+      self._db.get(ORIGIN + key, function (err, value) {
+        if (value) {
+          var ids = JSON.parse(value)
+          ids.forEach(function (id) {
+            if (!refs[id]) loadRef[id] = true
+          })
+        }
+        if (--pending === 0) loadExtraRefs(loadRef)
+      })
+    })
+    if (--pending === 0) loadExtraRefs(loadRef)
   }
+
+  function loadExtraRefs (extra) {
+    var pending = 1
+    Object.keys(extra).forEach(function (ref) {
+      pending++
+      self._db.get(REF + ref, function (err, value) {
+        if (value) {
+          var newValue = JSON.parse(value)
+            .filter(function (id) { return !remove[id] })
+          batch.push({
+            type: 'put',
+            key: REF + ref,
+            value: JSON.stringify(newValue)
+          })
+        }
+        if (--pending === 0) finish()
+      })
+    })
+    if (--pending === 0) finish()
+  }
+
   function finish () {
     docs.forEach(function (doc) {
       ;(doc.refs || []).forEach(function (ref) {
