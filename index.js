@@ -27,10 +27,22 @@ Refs.prototype.batch = function (docs, cb) {
   docs.forEach(function (doc) {
     ;(doc.links || []).forEach(function (link) {
       remove[link] = true
+      batch.push({
+        type: 'put',
+        key: LINK + link,
+        value: ''
+      })
     })
   })
   var refs = {}
   var pending = 1
+  docs.forEach(function (doc) {
+    pending++
+    self._db.get(LINK + doc.id, function (err, value) {
+      if (value !== undefined) remove[doc.id] = true
+      if (--pending === 0) fromRefs()
+    })
+  })
   Object.keys(refSet).forEach(function (ref) {
     pending++
     self._db.get(REF + ref, function (err, value) {

@@ -44,7 +44,7 @@ test('unordered linear single target batch with link', function (t) {
     { id: 'd', refs: ['a'], links: ['c'] },
     { id: 'b', refs: ['a'] },
     { id: 'c', refs: ['a'] },
-    { id: 'a', refs: [] },
+    { id: 'a', refs: [] }
   ]
   br.batch(rows, function (err) {
     t.error(err)
@@ -53,6 +53,31 @@ test('unordered linear single target batch with link', function (t) {
       t.deepEqual(ids.sort(), ['b','d'])
     })
   })
+})
+
+test('ordered multi-insert single target batch with link', function (t) {
+  t.plan(6)
+  var br = umbr(memdb())
+  var rows = [
+    { id: 'a', refs: [] },
+    { id: 'b', refs: ['a'] },
+    { id: 'c', refs: ['a'] },
+    { id: 'd', refs: ['a'], links: ['c'] }
+  ]
+  ;(function next (n) {
+    if (n === rows.length) return check()
+    br.batch([rows[n]], function (err) {
+      t.error(err)
+      next(n+1)
+    })
+  })(0)
+
+  function check () {
+    br.get('a', function (err, ids) {
+      t.error(err)
+      t.deepEqual(ids.sort(), ['b','d'])
+    })
+  }
 })
 
 test('unordered multi-insert single target batch with link', function (t) {
