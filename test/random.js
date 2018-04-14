@@ -4,10 +4,59 @@ var umbr = require('../')
 
 test('ordered random network', function (t) {
   var br = umbr(memdb())
+  var { batches, refs } = create()
+  t.plan(batches.length + Object.keys(refs).length*2)
+
+  ;(function next (n) {
+    if (n === batches.length) return check()
+    br.batch(batches[n], function (err) {
+      t.error(err)
+      next(n+1)
+    })
+  })(0)
+
+  function check () {
+    Object.keys(refs).forEach(function (id) {
+      br.get(id, function (err, ids) {
+        t.error(err)
+        t.deepEqual(ids.sort(), refs[id].map(String).sort())
+      })
+    })
+  }
+})
+
+test('unordered random network', function (t) {
+  var br = umbr(memdb())
+  var { batches, refs } = create()
+  t.plan(batches.length + Object.keys(refs).length*2)
+  batches.forEach(function (batch) {
+    batch.sort(function () { return Math.random() > 0.5 ? -1 : +1 })
+  })
+  batches.sort(function () { return Math.random() > 0.5 ? -1 : +1 })
+
+  ;(function next (n) {
+    if (n === batches.length) return check()
+    br.batch(batches[n], function (err) {
+      t.error(err)
+      next(n+1)
+    })
+  })(0)
+
+  function check () {
+    Object.keys(refs).forEach(function (id) {
+      br.get(id, function (err, ids) {
+        t.error(err)
+        t.deepEqual(ids.sort(), refs[id].map(String).sort())
+      })
+    })
+  }
+})
+
+function create () {
   var store = { refs: [], objects: {} }
   var batches = []
   var uid = 0
-  for (var i = 0; i < 10; i++) {
+  for (var i = 0; i < 100; i++) {
     var n = Math.floor(Math.random()*50)
     var batch = []
     for (var j = 1; j < n; j++) {
@@ -37,22 +86,5 @@ test('ordered random network', function (t) {
     }
     batches.push(batch)
   }
-  t.plan(batches.length + Object.keys(store.refs).length*2)
-
-  ;(function next (n) {
-    if (n === batches.length) return check()
-    br.batch(batches[n], function (err) {
-      t.error(err)
-      next(n+1)
-    })
-  })(0)
-
-  function check () {
-    Object.keys(store.refs).forEach(function (id) {
-      br.get(id, function (err, ids) {
-        t.error(err)
-        t.deepEqual(ids.sort(), store.refs[id].map(String).sort())
-      })
-    })
-  }
-})
+  return { batches, refs: store.refs }
+}
