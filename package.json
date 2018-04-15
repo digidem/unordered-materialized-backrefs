@@ -1,6 +1,6 @@
 {
   "name": "unordered-materialized-backrefs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "materialized view to calculate back-references for unordered log messages",
   "devDependencies": {
     "level": "^3.0.0",
