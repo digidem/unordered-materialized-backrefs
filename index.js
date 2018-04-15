@@ -7,10 +7,15 @@ module.exports = Refs
 function Refs (db, opts) {
   if (!(this instanceof Refs)) return new Refs(db, opts)
   this._db = db
+  this._writing = false
+  this._writeQueue = []
 }
 
 Refs.prototype.batch = function (docs, cb) {
   var self = this
+  if (self._writing) return self._writeQueue.push(docs, cb)
+  self._writing = true
+
   var batch = []
   var refSet = {}
   docs.forEach(function (doc) {
@@ -111,7 +116,16 @@ Refs.prototype.batch = function (docs, cb) {
         value: JSON.stringify(Object.keys(refs[ref]))
       })
     })
-    self._db.batch(batch, cb)
+    self._db.batch(batch, function (err) {
+      if (err) cb(err)
+      else cb()
+      self._writing = false
+      if (self._writeQueue.length > 0) {
+        var wdocs = self._writeQueue.shift()
+        var wcb = self._writeQueue.shift()
+        self.batch(wdocs, wcb)
+      }
+    })
   }
 }
 
