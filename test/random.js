@@ -66,7 +66,9 @@ function create () {
         var ref = Math.floor(Math.random()*uid)
         refs.push(ref)
         if (!store.refs[ref]) store.refs[ref] = []
-        store.refs[ref].push(uid)
+        if (store.refs[ref].indexOf(uid) < 0) {
+          store.refs[ref].push(uid)
+        }
       }
       var links = []
       var r = uid > 0 ? Math.floor(Math.min(uid,2)*Math.random()) : 0
