@@ -10,7 +10,7 @@ test('delete', function (t) {
     { type: 'put', id: 'b', refs: ['a'] },
     { type: 'put', id: 'c', refs: ['a'] },
     { type: 'put', id: 'd', refs: ['a'] },
-    { type: 'del', id: 'd' }
+    { type: 'del', id: 'd', links: ['d'] }
   ]
   br.batch(rows, function (err) {
     t.error(err)
